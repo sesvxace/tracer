@@ -1,5 +1,5 @@
 #--
-# Tracer v1.1 by Solistra
+# Tracer v1.2 by Solistra
 # ==============================================================================
 # 
 # Summary
@@ -8,6 +8,27 @@
 # debugger or information-gathering tool for Ruby code. By default, the output
 # from the tracer shows a visual representation of the Ruby call stack with
 # relevant information. This is primarily a scripting and debugging tool.
+# 
+# Usage
+# ------------------------------------------------------------------------------
+#   The tracer may be started either through a REPL or from a script call with
+# the following:
+# 
+#     SES::Tracer.start
+# 
+#   You may also supply your own block of code for the tracer to run by simply
+# passing a proc or lambda object as the argument (or running the block directly
+# on the method):
+# 
+#     SES::Tracer.start do |event, file, line, id, binding, class_name|
+#       file.gsub!(/^{\d+}/, SES::Tracer.scripts[$1.to_i]) if file =~ /^{(\d+)}/
+#       printf("%8s %s:%-4d %20s %-20s\n", event, file, line, id, class_name)
+#     end
+# 
+#   The tracer may be stopped through a REPL or from a script call with the
+# following:
+# 
+#     SES::Tracer.stop
 # 
 # Advanced Usage
 # ------------------------------------------------------------------------------
@@ -35,6 +56,10 @@
 # - 'end' finishes a class or module definition.
 # - 'line' is given when code is executed on a new line.
 # - 'raise' is received when an Exception is raised.
+# 
+#   Make use of this information however you see fit; remember, the only
+# limitation to the power of the callback is how you choose to write your code
+# around it.
 # 
 # License
 # ------------------------------------------------------------------------------
@@ -113,8 +138,8 @@ module SES
     end
     
     # Starts the tracer with the given block (SES::Tracer::Lambda by default).
-    def self.start(block = SES::Tracer::Lambda)
-      ::Kernel.set_trace_func(block)
+    def self.start(code = SES::Tracer::Lambda, &block)
+      ::Kernel.set_trace_func(block_given? ? block : code)
     end
     class << self ; alias :run :start ; end
     
@@ -126,7 +151,7 @@ module SES
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
-      Description = Script.new(:Tracer, 1.1, :Solistra)
+      Description = Script.new(:Tracer, 1.2, :Solistra)
       Register.enter(Description)
     end
   end
