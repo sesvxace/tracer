@@ -11,13 +11,13 @@
 # 
 # Advanced Usage
 # ------------------------------------------------------------------------------
-#   Essentially, this script is a wrapper around Ruby's +Kernel.set_trace_func+
+#   Essentially, this script is a wrapper around Ruby's 'Kernel.set_trace_func'
 # method, which is a callback provided by the language when code is executed.
 # This script has been written as a tracer and simple debugger, but has great
 # potential to do much more than this. Your creativity and skill is the only
 # real limit to the possibilities.
 # 
-#   +Kernel.set_trace_func+ provides a great deal of information that can be
+#   'Kernel.set_trace_func' provides a great deal of information that can be
 # used by both the conditional and tracer provided by this script. Ruby's tracer
 # reports the *event* that was received ('c-call', 'c-return', 'call', 'return',
 # 'class', 'end', 'line', and 'raise'); the *file* where the event occurred; the
@@ -25,15 +25,16 @@
 # method; and the *class* which it was executed in.
 # 
 #   Most of the information provided is largely self-explanatory, but the events
-# may need a little elaboration: 
-#   * 'c-call' is given when a C routine has been called.
-#   * 'c-return', likewise, occurs when a C routine returns.
-#   * 'call' is when a Ruby method is called.
-#   * 'return' would be when a Ruby method returns.
-#   * 'class' marks the opening of a new Ruby class or module.
-#   * 'end' finishes a class or module definition.
-#   * 'line' is given when code is executed on a new line.
-#   * 'raise' is received when an Exception is raised.
+# may need a little elaboration:
+# 
+# - 'c-call' is given when a C routine has been called.
+# - 'c-return', likewise, occurs when a C routine returns.
+# - 'call' is when a Ruby method is called.
+# - 'return' would be when a Ruby method returns.
+# - 'class' marks the opening of a new Ruby class or module.
+# - 'end' finishes a class or module definition.
+# - 'line' is given when code is executed on a new line.
+# - 'raise' is received when an Exception is raised.
 # 
 # License
 # ------------------------------------------------------------------------------
@@ -51,7 +52,7 @@ module SES
   # Tracer
   # ============================================================================
   # Defines operation and output of the SES Tracer. This is simply a moderate
-  # wrapper around Ruby's +Kernel.set_trace_func+ method.
+  # wrapper around Ruby's 'Kernel.set_trace_func' method.
   module Tracer
     class << self ; attr_accessor :conditional, :tracer ; end
     # ==========================================================================
@@ -60,7 +61,7 @@ module SES
     # Whether or not to automatically start the tracer when playing the game in
     # test mode.
     # **NOTE:** the tracer can cause a significant amount of lag, particularly
-    # when loading game data from disk in +DataManager.init+.
+    # when loading game data from disk in 'DataManager.init'.
     AUTO_RUN = false
     
     # Conditional used to determine the conditions under which @tracer should
@@ -73,7 +74,7 @@ module SES
     end
     
     # Performs tracing operations and formats the output. This lambda is only
-    # called if +@conditional+ evaluates to a value other than +false+ or +nil+.
+    # called if @conditional evaluates to a value other than +false+ or +nil+.
     # The +file+ variable passed to this lambda is a string containing the name
     # of the currently operating script being traced.
     @tracer = ->(event, file, line, id, binding, class_name) do
@@ -99,8 +100,8 @@ module SES
     @scripts = load_data('Data/Scripts.rvdata2').map! { |script| script[1] }
     
     # Provides the block used for tracing. By default, this lambda operates if
-    # the defined +@conditional+ evaluates to +true+, replaces the file names
-    # given by Ace with script names, and calls the +@tracer+ lambda.
+    # the defined @conditional evaluates to +true+, replaces the file names
+    # given by Ace with script names, and calls the @tracer lambda.
     Lambda = lambda do |event, file, line, id, binding, class_name|
       if @conditional.call(event, file, line, id, binding, class_name)
         file.gsub!(/^{\d+}/, @scripts[$1.to_i]) if file =~ /^{(\d+)}/
