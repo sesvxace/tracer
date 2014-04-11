@@ -35,8 +35,8 @@ Advanced Usage
   Essentially, this script is a wrapper around Ruby's 'Kernel.set_trace_func'
 method, which is a callback provided by the language when code is executed.
 This script has been written as a tracer and simple debugger, but has great
-potential to do much more than this. Your creativity and skill is the only
-real limit to the possibilities.
+potential to do much more than this. Your creativity and skill are the only
+real limits to the possibilities.
 
   'Kernel.set_trace_func' provides a great deal of information that can be
 used by both the conditional and tracer provided by this script. Ruby's tracer
