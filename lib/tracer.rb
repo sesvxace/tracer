@@ -1,5 +1,5 @@
 #--
-# Tracer v1.0 by Solistra
+# Tracer v1.1 by Solistra
 # ==============================================================================
 # 
 # Summary
@@ -54,7 +54,10 @@ module SES
   # Defines operation and output of the SES Tracer. This is simply a moderate
   # wrapper around Ruby's 'Kernel.set_trace_func' method.
   module Tracer
-    class << self ; attr_accessor :conditional, :tracer ; end
+    class << self
+      attr_accessor :conditional, :tracer
+      attr_reader   :scripts
+    end
     # ==========================================================================
     # BEGIN CONFIGURATION
     # ==========================================================================
@@ -102,7 +105,7 @@ module SES
     # Provides the block used for tracing. By default, this lambda operates if
     # the defined @conditional evaluates to +true+, replaces the file names
     # given by Ace with script names, and calls the @tracer lambda.
-    Lambda = lambda do |event, file, line, id, binding, class_name|
+    Lambda = ->(event, file, line, id, binding, class_name) do
       if @conditional.call(event, file, line, id, binding, class_name)
         file.gsub!(/^{\d+}/, @scripts[$1.to_i]) if file =~ /^{(\d+)}/
         @tracer.call(event, file, line, id, binding, class_name)
@@ -123,7 +126,7 @@ module SES
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
-      Description = Script.new(:Tracer, 1.0, :Solistra)
+      Description = Script.new(:Tracer, 1.1, :Solistra)
       Register.enter(Description)
     end
   end
@@ -131,8 +134,8 @@ end
 # ==============================================================================
 # SceneManager
 # ==============================================================================
-if SES::Tracer::AUTO_RUN && $TEST
-  module SceneManager
+module SceneManager
+  if SES::Tracer::AUTO_RUN && $TEST
     class << self ; alias :ses_tracer_sm_run :run ; end
     
     # Aliased to automatically run the tracer if SES::Tracer::AUTO_RUN is set to
