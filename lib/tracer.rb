@@ -1,27 +1,29 @@
 #--
 # Tracer v1.2 by Solistra
-# ==============================================================================
+# =============================================================================
 # 
 # Summary
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #   This script provides a simple, customizable tracer which can be used as a
 # debugger or information-gathering tool for Ruby code. By default, the output
 # from the tracer shows a visual representation of the Ruby call stack with
 # relevant information. This is primarily a scripting and debugging tool.
 # 
 # Usage
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #   The tracer may be started either through a REPL or from a script call with
 # the following:
 # 
 #     SES::Tracer.start
 # 
 #   You may also supply your own block of code for the tracer to run by simply
-# passing a proc or lambda object as the argument (or running the block directly
+# passing a proc or lambda object as the argument (or running a block directly
 # on the method):
 # 
 #     SES::Tracer.start do |event, file, line, id, binding, class_name|
-#       file.gsub!(/^{\d+}/, SES::Tracer.scripts[$1.to_i]) if file =~ /^{(\d+)}/
+#       if file =~ /^{(\d+)}/
+#         file.gsub!(/^{\d+}/, SES::Tracer.scripts[$1.to_i])
+#       end
 #       printf("%8s %s:%-4d %20s %-20s\n", event, file, line, id, class_name)
 #     end
 # 
@@ -31,7 +33,7 @@
 #     SES::Tracer.stop
 # 
 # Advanced Usage
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #   Essentially, this script is a wrapper around Ruby's 'Kernel.set_trace_func'
 # method, which is a callback provided by the language when code is executed.
 # This script has been written as a tracer and simple debugger, but has great
@@ -39,13 +41,13 @@
 # real limits to the possibilities.
 # 
 #   'Kernel.set_trace_func' provides a great deal of information that can be
-# used by both the conditional and tracer provided by this script. Ruby's tracer
-# reports the *event* that was received ('c-call', 'c-return', 'call', 'return',
-# 'class', 'end', 'line', and 'raise'); the *file* where the event occurred; the
-# *line* within that file; the *method* (or *id*) executed; the *binding* of the
-# method; and the *class* which it was executed in.
+# used by both the conditional and tracer provided by this script. Ruby's
+# tracer reports the *event* that was received ('c-call', 'c-return', 'call',
+# 'return', 'class', 'end', 'line', and 'raise'); the *file* where the event
+# occurred; the *line* within that file; the *method* (or *id*) executed; the
+# *binding* of the method; and the *class* which it was executed in.
 # 
-#   Most of the information provided is largely self-explanatory, but the events
+#   Most of the information provided is largely self-explanatory, but events
 # may need a little elaboration:
 # 
 # - 'c-call' is given when a C routine has been called.
@@ -62,20 +64,21 @@
 # around it.
 # 
 # License
-# ------------------------------------------------------------------------------
-#   This script is made available under the terms of the MIT Expat license. View
-# [this page](http://sesvxace.wordpress.com/license/) for more information.
+# -----------------------------------------------------------------------------
+#   This script is made available under the terms of the MIT Expat license.
+# View [this page](http://sesvxace.wordpress.com/license/) for more detailed
+# information.
 # 
 # Installation
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #   Place this script below Materials, but above Main. Place this script below
 # the SES Core (v2.0) script if you are using it.
 # 
 #++
 module SES
-  # ============================================================================
+  # ===========================================================================
   # Tracer
-  # ============================================================================
+  # ===========================================================================
   # Defines operation and output of the SES Tracer. This is simply a moderate
   # wrapper around Ruby's 'Kernel.set_trace_func' method.
   module Tracer
@@ -83,9 +86,9 @@ module SES
       attr_accessor :conditional, :tracer
       attr_reader   :scripts
     end
-    # ==========================================================================
+    # =========================================================================
     # BEGIN CONFIGURATION
-    # ==========================================================================
+    # =========================================================================
     # Whether or not to automatically start the tracer when playing the game in
     # test mode.
     # **NOTE:** the tracer can cause a significant amount of lag, particularly
@@ -93,9 +96,9 @@ module SES
     AUTO_RUN = false
     
     # Conditional used to determine the conditions under which @tracer should
-    # perform. The tracer will not fire if this conditional evaluates to +false+
-    # or +nil+. Consult the Advanced Usage section in the header for more
-    # information about the tracing values given to this lambda.
+    # perform. The tracer will not activate if this conditional evaluates to a 
+    # +false+ or +nil+ value. Consult the Advanced Usage section in the header
+    # for more information about the tracing values given to this lambda.
     @conditional = ->(event, file, line, id, binding, class_name) do
       # Return true when any code (C or Ruby) is called or returned.
       ['call', 'c-call', 'return', 'c-return'].any? { |value| event == value }
@@ -119,9 +122,9 @@ module SES
         @depth -= 1 if @depth > 0
       end
     end
-    # ==========================================================================
+    # =========================================================================
     # END CONFIGURATION
-    # ==========================================================================
+    # =========================================================================
     # Collects script names in the order they are placed within the Ace Script
     # Editor. Used in the Lambda block to provide script names for the +file+
     # variable used.
@@ -156,17 +159,17 @@ module SES
     end
   end
 end
-# ==============================================================================
+# =============================================================================
 # SceneManager
-# ==============================================================================
+# =============================================================================
 module SceneManager
   if SES::Tracer::AUTO_RUN && $TEST
     class << self ; alias :ses_tracer_sm_run :run ; end
     
-    # Aliased to automatically run the tracer if SES::Tracer::AUTO_RUN is set to
-    # a true value and the game is being run in $TEST mode. The only code called
-    # in RGSS3 before the tracer can begin is the +rgss_main+ method and its
-    # associated block.
+    # Aliased to automatically run the tracer if SES::Tracer::AUTO_RUN is set
+    # to a true value and the game is being run in $TEST mode. The only code
+    # called in RGSS3 before the tracer can begin is the +rgss_main+ method and
+    # its associated block.
     def self.run(*args, &block)
       SES::Tracer.run
       ses_tracer_sm_run(*args, &block)
