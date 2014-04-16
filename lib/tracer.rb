@@ -1,5 +1,5 @@
 #--
-# Tracer v1.2 by Solistra
+# Tracer v1.3 by Solistra and Enelvon
 # =============================================================================
 # 
 # Summary
@@ -31,6 +31,13 @@
 # following:
 # 
 #     SES::Tracer.stop
+#
+#   As of v1.3, you can specify methods that will always invoke the tracer when
+# run through the use of the TRACE_METHODS hash. Its keys are the names of
+# classes and its values are symbols corresponding to methods within the class.
+# By default it will cause command_355 of Game_Interpreter to be traced. This
+# is the "Script..." event command, which (without the help of the Tracer) will
+# produce frustrating errors that point back to the command_355 method itself.
 # 
 # Advanced Usage
 # -----------------------------------------------------------------------------
@@ -95,6 +102,12 @@ module SES
     # when loading game data from disk in 'DataManager.init'.
     AUTO_RUN = false
     
+    # A hash of methods (by class) that should always be watched by the Tracer.
+    TRACE_METHODS = {
+        # Class             # Array of Methods
+        Game_Interpreter => [:command_355],
+      }
+    
     # Conditional used to determine the conditions under which @tracer should
     # perform. The tracer will not activate if this conditional evaluates to a 
     # +false+ or +nil+ value. Consult the Advanced Usage section in the header
@@ -154,7 +167,7 @@ module SES
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
-      Description = Script.new(:Tracer, 1.2, :Solistra)
+      Description = Script.new(:Tracer, 1.3, :Solistra)
       Register.enter(Description)
     end
   end
@@ -162,17 +175,26 @@ end
 # =============================================================================
 # SceneManager
 # =============================================================================
-module SceneManager
-  if SES::Tracer::AUTO_RUN && $TEST
-    class << self ; alias :ses_tracer_sm_run :run ; end
-    
-    # Aliased to automatically run the tracer if SES::Tracer::AUTO_RUN is set
-    # to a true value and the game is being run in $TEST mode. The only code
-    # called in RGSS3 before the tracer can begin is the +rgss_main+ method and
-    # its associated block.
-    def self.run(*args, &block)
-      SES::Tracer.run
-      ses_tracer_sm_run(*args, &block)
+class << SceneManager
+  # Aliased to redefine methods in the TRACE_METHODS hash. This redefinition
+  # invokes the tracer whenever the specified methods are called.
+  alias ses_tracer_sm_run run
+  def run
+    SES::Tracer::TRACE_METHODS.each_pair do |rclass, rmethods|
+      rmethods.each do |m|
+        m2 = rclass.instance_method(m)
+        rclass.send(:define_method, m, Proc.new do
+          SES::Tracer.start
+          m2.bind(self).call
+          SES::Tracer.stop
+        end)
+      end
     end
+    # Automatically run the tracer if SES::Tracer::AUTO_RUN is set to a true
+    # value and the game is being run in $TEST mode. The only code called in
+    # RGSS3 before the tracer can begin is the `rgss_main` method, its
+    # associated block, and the redefinition of automatically traced methods.
+    SES::Tracer.run if SES::Tracer::AUTO_RUN && $TEST
+    ses_tracer_sm_run
   end
 end
