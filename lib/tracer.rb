@@ -167,7 +167,7 @@ module SES
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
-      Description = Script.new(:Tracer, 1.3, :Solistra)
+      Description = Script.new(:Tracer, 1.3, :Solistra, :Enelvon)
       Register.enter(Description)
     end
   end

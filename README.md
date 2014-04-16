@@ -1,5 +1,4 @@
-
-Tracer v1.2 by Solistra
+Tracer v1.3 by Solistra and Enelvon
 ==============================================================================
 
 Summary
@@ -29,6 +28,13 @@ on the method):
 following:
 
     SES::Tracer.stop
+
+  As of v1.3, you can specify methods that will always invoke the tracer when
+run through the use of the TRACE_METHODS hash. Its keys are the names of
+classes and its values are symbols corresponding to methods within the class.
+By default it will cause command_355 of Game_Interpreter to be traced. This
+is the "Script..." event command, which (without the help of the Tracer) will
+produce frustrating errors that point back to the command_355 method itself.
 
 Advanced Usage
 ------------------------------------------------------------------------------
