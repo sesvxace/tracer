@@ -1,4 +1,4 @@
-Tracer v1.3 by Solistra and Enelvon
+Tracer v1.4 by Solistra and Enelvon
 ==============================================================================
 
 Summary

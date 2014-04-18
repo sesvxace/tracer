@@ -1,5 +1,5 @@
 #--
-# Tracer v1.3 by Solistra and Enelvon
+# Tracer v1.4 by Solistra and Enelvon
 # =============================================================================
 # 
 # Summary
@@ -167,7 +167,7 @@ module SES
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
-      Description = Script.new(:Tracer, 1.3, :Solistra, :Enelvon)
+      Description = Script.new(:Tracer, 1.3, :Solistra)
       Register.enter(Description)
     end
   end
@@ -182,12 +182,19 @@ class << SceneManager
   def run
     SES::Tracer::TRACE_METHODS.each_pair do |rclass, rmethods|
       rmethods.each do |m|
-        m2 = rclass.instance_method(m)
-        rclass.send(:define_method, m, Proc.new do
-          SES::Tracer.start
-          m2.bind(self).call
-          SES::Tracer.stop
-        end)
+        begin
+          m2 = rclass.instance_method(m)
+          rclass.send(:define_method, m) do |*args|
+            SES::Tracer.start
+            m2.bind(self).call(*args)
+            SES::Tracer.stop
+          end
+        rescue
+          m2 = rclass.singleton_class.instance_method(m)
+          rclass.send(:define_singleton_method, m) do |*args|
+            m2.bind(self).call(*args)
+          end
+        end
       end
     end
     # Automatically run the tracer if SES::Tracer::AUTO_RUN is set to a true
