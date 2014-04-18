@@ -1,5 +1,5 @@
 #--
-# Tracer v1.4 by Solistra and Enelvon
+# Tracer v1.5 by Solistra and Enelvon
 # =============================================================================
 # 
 # Summary
@@ -21,9 +21,7 @@
 # on the method):
 # 
 #     SES::Tracer.start do |event, file, line, id, binding, class_name|
-#       if file =~ /^{(\d+)}/
-#         file.gsub!(/^{\d+}/, SES::Tracer.scripts[$1.to_i])
-#       end
+#       file.gsub!(/^{\d+}/, $RGSS_SCRIPTS[$1.to_i][1]) if file =~ /^{(\d+)}/
 #       printf("%8s %s:%-4d %20s %-20s\n", event, file, line, id, class_name)
 #     end
 # 
@@ -31,23 +29,30 @@
 # following:
 # 
 #     SES::Tracer.stop
-#
-#   As of v1.3, you can specify methods that will always invoke the tracer when
-# run through the use of the TRACE_METHODS hash. Its keys are the names of
+# 
+#   You can also specify methods that will **always** invoke the tracer when
+# run through the use of the `TRACE_METHODS` hash. Its keys are the names of
 # classes and its values are symbols corresponding to methods within the class.
-# By default it will cause command_355 of Game_Interpreter to be traced. This
-# is the "Script..." event command, which (without the help of the Tracer) will
-# produce frustrating errors that point back to the command_355 method itself.
+# By default it will cause `command_355` of `Game_Interpreter` to be traced.
+# This is the "Script..." event command, which (without the help of the Tracer)
+# will produce frustrating errors that point back to the `command_355` method
+# itself. For example, to begin tracing when `Game_BattlerBase#change_hp` is
+# called, we would do the following:
+# 
+#     TRACE_METHODS = {
+#       Game_BattlerBase => [:change_hp],
+#       Game_Interpreter => [:command_355],
+#     }
 # 
 # Advanced Usage
 # -----------------------------------------------------------------------------
-#   Essentially, this script is a wrapper around Ruby's 'Kernel.set_trace_func'
+#   Essentially, this script is a wrapper around Ruby's `Kernel.set_trace_func`
 # method, which is a callback provided by the language when code is executed.
 # This script has been written as a tracer and simple debugger, but has great
 # potential to do much more than this. Your creativity and skill are the only
 # real limits to the possibilities.
 # 
-#   'Kernel.set_trace_func' provides a great deal of information that can be
+#   `Kernel.set_trace_func` provides a great deal of information that can be
 # used by both the conditional and tracer provided by this script. Ruby's
 # tracer reports the *event* that was received ('c-call', 'c-return', 'call',
 # 'return', 'class', 'end', 'line', and 'raise'); the *file* where the event
@@ -66,10 +71,6 @@
 # - 'line' is given when code is executed on a new line.
 # - 'raise' is received when an Exception is raised.
 # 
-#   Make use of this information however you see fit; remember, the only
-# limitation to the power of the callback is how you choose to write your code
-# around it.
-# 
 # License
 # -----------------------------------------------------------------------------
 #   This script is made available under the terms of the MIT Expat license.
@@ -87,7 +88,7 @@ module SES
   # Tracer
   # ===========================================================================
   # Defines operation and output of the SES Tracer. This is simply a moderate
-  # wrapper around Ruby's 'Kernel.set_trace_func' method.
+  # wrapper around Ruby's `Kernel.set_trace_func` method.
   module Tracer
     class << self
       attr_accessor :conditional, :tracer
@@ -96,10 +97,10 @@ module SES
     # =========================================================================
     # BEGIN CONFIGURATION
     # =========================================================================
-    # Whether or not to automatically start the tracer when playing the game in
+    # Whether or not to automatically start the Tracer when playing the game in
     # test mode.
     # **NOTE:** the tracer can cause a significant amount of lag, particularly
-    # when loading game data from disk in 'DataManager.init'.
+    # when loading game data from disk in `DataManager.init`.
     AUTO_RUN = false
     
     # A hash of methods (by class) that should always be watched by the Tracer.
@@ -108,9 +109,9 @@ module SES
         Game_Interpreter => [:command_355],
       }
     
-    # Conditional used to determine the conditions under which @tracer should
-    # perform. The tracer will not activate if this conditional evaluates to a 
-    # +false+ or +nil+ value. Consult the Advanced Usage section in the header
+    # Conditional used to determine the conditions under which `@tracer` should
+    # perform. The Tracer will not activate if this conditional evaluates to a 
+    # `false` or `nil` value. Consult the Advanced Usage section in the header
     # for more information about the tracing values given to this lambda.
     @conditional = ->(event, file, line, id, binding, class_name) do
       # Return true when any code (C or Ruby) is called or returned.
@@ -118,9 +119,9 @@ module SES
     end
     
     # Performs tracing operations and formats the output. This lambda is only
-    # called if @conditional evaluates to a value other than +false+ or +nil+.
-    # The +file+ variable passed to this lambda is a string containing the name
-    # of the currently operating script being traced.
+    # called if `@conditional` evaluates to a value other than `false` or
+    # `nil`. The `file` variable passed to this lambda is a string containing
+    # the name of the currently operating script being traced.
     @tracer = ->(event, file, line, id, binding, class_name) do
       @depth ||= 0 # Used to track the depth of the Ruby call stack.
       case event
@@ -138,37 +139,39 @@ module SES
     # =========================================================================
     # END CONFIGURATION
     # =========================================================================
-    # Collects script names in the order they are placed within the Ace Script
-    # Editor. Used in the Lambda block to provide script names for the +file+
-    # variable used.
-    @scripts = load_data('Data/Scripts.rvdata2').map! { |script| script[1] }
-    
     # Provides the block used for tracing. By default, this lambda operates if
-    # the defined @conditional evaluates to +true+, replaces the file names
-    # given by Ace with script names, and calls the @tracer lambda.
+    # the defined `@conditional` evaluates to `true`, replaces the file names
+    # given by Ace with script names, and calls the `@tracer` lambda.
     Lambda = ->(event, file, line, id, binding, class_name) do
-      if @conditional.call(event, file, line, id, binding, class_name)
-        file.gsub!(/^{\d+}/, @scripts[$1.to_i]) if file =~ /^{(\d+)}/
-        @tracer.call(event, file, line, id, binding, class_name)
-      end
+      return if !@conditional.call(event, file, line, id, binding, class_name)
+      file.gsub!(/^{\d+}/, $RGSS_SCRIPTS[$1.to_i][1]) if file =~ /^{(\d+)}/
+      @tracer.call(event, file, line, id, binding, class_name)
     end
     
-    # Starts the tracer with the given block (SES::Tracer::Lambda by default).
+    # Starts the tracer with the given block (`SES::Tracer::Lambda` if no block
+    # is given). Returns `true` if started, `false` otherwise.
     def self.start(code = SES::Tracer::Lambda, &block)
       ::Kernel.set_trace_func(block_given? ? block : code)
+      true
+    rescue
+      false
     end
     class << self ; alias :run :start ; end
     
-    # Stops the tracer by setting the trace block to +nil+.
+    # Stops the tracer by setting the trace block to `nil`. Returns `true` if
+    # stopped, `false` otherwise.
     def self.stop
       @depth = 0 unless @depth.nil?
       ::Kernel.set_trace_func(nil)
+      true
+    rescue
+      false
     end
     class << self ; alias :pause :stop ; end
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
-      Description = Script.new(:Tracer, 1.4, :Solistra, :Enelvon)
+      Description = Script.new(:Tracer, 1.5)
       Register.enter(Description)
     end
   end
@@ -177,28 +180,40 @@ end
 # SceneManager
 # =============================================================================
 class << SceneManager
-  # Aliased to redefine methods in the TRACE_METHODS hash. This redefinition
+  # Aliased to redefine methods in the `TRACE_METHODS` hash. This redefinition
   # invokes the tracer whenever the specified methods are called.
   alias ses_tracer_sm_run run
   def run
     SES::Tracer::TRACE_METHODS.each_pair do |rclass, rmethods|
       rmethods.each do |m|
         begin
+          # Store a reference to the original method.
           m2 = rclass.instance_method(m)
-          rclass.send(:define_method, m) do |*args|
+          # Redefine the original method to start the SES Tracer when called
+          # and stop it once the method has returned.
+          rclass.send(:define_method, m) do |*args, &block|
             SES::Tracer.start
-            m2.bind(self).call(*args)
+            # Call the original method and store its return value to be given
+            # after the Tracer has stopped operation.
+            retval = m2.bind(self).call(*args, &block)
             SES::Tracer.stop
+            retval
           end
         rescue NameError
+          # Attempt redefinition methods on the singleton class; a `NameError`
+          # prevented the previous, so the methods are defined there (unless
+          # they simply aren't defined at all.)
           m2 = rclass.singleton_class.instance_method(m)
-          rclass.send(:define_singleton_method, m) do |*args|
-            m2.bind(self).call(*args)
+          rclass.send(:define_singleton_method, m) do |*args, &block|
+            SES::Tracer.start
+            retval = m2.bind(self).call(*args, &block)
+            SES::Tracer.stop
+            retval
           end
         end
       end
     end
-    # Automatically run the tracer if SES::Tracer::AUTO_RUN is set to a true
+    # Automatically run the tracer if `SES::Tracer::AUTO_RUN` is set to a true
     # value and the game is being run in $TEST mode. The only code called in
     # RGSS3 before the tracer can begin is the `rgss_main` method, its
     # associated block, and the redefinition of automatically traced methods.
