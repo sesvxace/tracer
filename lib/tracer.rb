@@ -161,6 +161,7 @@ module SES
     
     # Stops the tracer by setting the trace block to +nil+.
     def self.stop
+      @depth = 0 unless @depth.nil?
       ::Kernel.set_trace_func(nil)
     end
     class << self ; alias :pause :stop ; end
