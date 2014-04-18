@@ -161,6 +161,7 @@ module SES
     
     # Stops the tracer by setting the trace block to +nil+.
     def self.stop
+      @depth = 0 unless @depth.nil?
       ::Kernel.set_trace_func(nil)
     end
     class << self ; alias :pause :stop ; end
@@ -189,7 +190,7 @@ class << SceneManager
             m2.bind(self).call(*args)
             SES::Tracer.stop
           end
-        rescue
+        rescue NameError
           m2 = rclass.singleton_class.instance_method(m)
           rclass.send(:define_singleton_method, m) do |*args|
             m2.bind(self).call(*args)
