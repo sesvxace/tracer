@@ -90,10 +90,7 @@ module SES
   # Defines operation and output of the SES Tracer. This is simply a moderate
   # wrapper around Ruby's `Kernel.set_trace_func` method.
   module Tracer
-    class << self
-      attr_accessor :conditional, :tracer
-      attr_reader   :scripts
-    end
+    class << self ; attr_accessor :conditional, :tracer ; end
     # =========================================================================
     # BEGIN CONFIGURATION
     # =========================================================================
