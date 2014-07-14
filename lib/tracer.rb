@@ -83,17 +83,30 @@
 # the SES Core (v2.0) script if you are using it.
 # 
 #++
+
+# SES
+# =============================================================================
+# The top-level namespace for all SES scripts.
 module SES
-  # ===========================================================================
   # Tracer
   # ===========================================================================
   # Defines operation and output of the SES Tracer. This is simply a moderate
   # wrapper around Ruby's `Kernel.set_trace_func` method.
   module Tracer
-    class << self ; attr_accessor :conditional, :tracer ; end
+    class << self
+      # Proc object which determines whether or not the SES Tracer should run.
+      # @return [Proc]
+      attr_accessor :conditional
+      
+      # Proc object used as the value for `Kernel.set_trace_func` when
+      # {SES::Tracer.start} is called without arguments.
+      # @return [Proc]
+      attr_accessor :tracer
+    end
     # =========================================================================
     # BEGIN CONFIGURATION
     # =========================================================================
+    
     # Whether or not to automatically start the Tracer when playing the game in
     # test mode.
     # **NOTE:** the tracer can cause a significant amount of lag, particularly
@@ -133,9 +146,11 @@ module SES
         @depth -= 1 if @depth > 0
       end
     end
+    
     # =========================================================================
     # END CONFIGURATION
     # =========================================================================
+    
     # Provides the block used for tracing. By default, this lambda operates if
     # the defined `@conditional` evaluates to `true`, replaces the file names
     # given by Ace with script names, and calls the `@tracer` lambda.
@@ -145,41 +160,50 @@ module SES
       @tracer.call(event, file, line, id, binding, class_name)
     end
     
-    # Starts the tracer with the given block (`SES::Tracer::Lambda` if no block
-    # is given). Returns `true` if started, `false` otherwise.
+    # Starts the tracer with the given block ({SES::Tracer::Lambda} if no block
+    # is given).
+    # 
+    # @param code [Proc] the proc object to use as the tracing function when no
+    #   block is given
+    # @return [Boolean] `true` if started, `false` otherwise
     def self.start(code = SES::Tracer::Lambda, &block)
-      ::Kernel.set_trace_func(block_given? ? block : code)
+      Kernel.set_trace_func(block_given? ? block : code)
       true
     rescue
       false
     end
-    class << self ; alias :run :start ; end
     
-    # Stops the tracer by setting the trace block to `nil`. Returns `true` if
-    # stopped, `false` otherwise.
+    # Stops the tracer by setting the trace block to `nil`.
+    # 
+    # @return [Boolean] `true` if successfully stopped, `false` otherwise
     def self.stop
       @depth = 0 unless @depth.nil?
-      ::Kernel.set_trace_func(nil)
+      Kernel.set_trace_func(nil)
       true
     rescue
       false
     end
-    class << self ; alias :pause :stop ; end
     
     # Register this script with the SES Core if it exists.
     if SES.const_defined?(:Register)
+      # Script metadata.
       Description = Script.new(:Tracer, 1.5)
       Register.enter(Description)
     end
   end
 end
-# =============================================================================
 # SceneManager
 # =============================================================================
+# Module handling scene transitions and the running status of the game.
 class << SceneManager
   # Aliased to redefine methods in the `TRACE_METHODS` hash. This redefinition
   # invokes the tracer whenever the specified methods are called.
-  alias ses_tracer_sm_run run
+  # @see .run
+  alias_method :ses_tracer_sm_run, :run
+  
+  # Begins running the game; by default, the only method called by `rgss_main`.
+  # 
+  # @return [void]
   def run
     SES::Tracer::TRACE_METHODS.each_pair do |rclass, rmethods|
       rmethods.each do |m|
