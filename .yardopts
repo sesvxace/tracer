@@ -1,0 +1,3 @@
+--markup markdown
+--title "SES Tracer Documentation"
+lib/**/*.rb
